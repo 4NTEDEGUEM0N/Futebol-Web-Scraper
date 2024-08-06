@@ -31,8 +31,6 @@ times = {
     "Bolívar": "bolivar"
 }
 
-path_planilha = "/home/thiago/Área de trabalho/palpitometro.xlsx"
-
 
 def verificar_partidas_planilha(path_planilha):
     agora = datetime.now().strftime("%Y-%m-%d")
@@ -88,6 +86,13 @@ def atualizar_partidas(partidas_atualizar, partidas_resultado, sheet):
     return sheet
 
 
+google_colab = False
+
+if google_colab:
+    path_planilha = "/content/drive/My Drive/Colab Notebooks/palpitometro.xlsx"
+else:
+    path_planilha = "/home/thiago/Área de trabalho/palpitometro.xlsx"
+
 partidas_atualizar, wb, sheet = verificar_partidas_planilha(path_planilha)
 partidas_resultado = buscar_resultados(partidas_atualizar)
 sheet_atualizada = atualizar_partidas(partidas_atualizar, partidas_resultado, sheet)
@@ -98,4 +103,7 @@ for partida in partidas_atualizar:
     linha_valores = [cell.value for cell in sheet[partida[0]]]
     print(linha_valores)
 
-wb.save("/home/thiago/Área de trabalho/palpitometro_atualizado.xlsx")
+if google_colab:
+    wb.save("/content/drive/My Drive/Colab Notebooks/alpitometro_atualizado.xlsx")
+else:
+    wb.save("/home/thiago/Área de trabalho/palpitometro_atualizado.xlsx")
