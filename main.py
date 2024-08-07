@@ -1,7 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 from openpyxl import load_workbook
+
+google_colab = False
+if google_colab:
+  from google.colab import drive
+  drive.mount('/content/drive')
 
 times = {
     "São Paulo": "sao-paulo",
@@ -53,6 +58,7 @@ def verificar_partidas_planilha(path_planilha):
 def buscar_resultados(partidas_atualizar):
     partidas_resultado = []
     for partida_desatualizadas in partidas_atualizar:
+        provavel_resultado = []
         url = "https://www.placardefutebol.com.br/time/" + str(times[partida_desatualizadas[1]]) + "/ultimos-jogos"
         r = requests.get(url)
         soup = BeautifulSoup(r.text, 'lxml')
@@ -62,14 +68,20 @@ def buscar_resultados(partidas_atualizar):
             campeonato = partida.find('div', attrs={'class': 'match__lg_card--league'}).text
             if campeonato == "Copa do Brasil" or campeonato == "Copa Libertadores":
                 if partida.find_all('div', attrs={'class': 'match__lg_card--date'}):
-                    dia_mes = partida.find('div', attrs={'class': 'match__lg_card--date'}).text.split()[1].split("/")
-                    data_partida = datetime(2024, int(dia_mes[1]), int(dia_mes[0])).strftime("%Y-%m-%d")
+                    data = partida.find('div', attrs={'class': 'match__lg_card--date'}).text.split()
+                    if data[0] == "ontem":
+                        data_partida = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+                    else:
+                        dia_mes = data[1].split("/")
+                        data_partida = datetime(2024, int(dia_mes[1]), int(dia_mes[0])).strftime("%Y-%m-%d")
+
                     time_casa = partida.find('div', attrs={'class': 'match__lg_card--ht-name'}).text
                     time_fora = partida.find('div', attrs={'class': 'match__lg_card--at-name'}).text
                     placar = partida.find('div', attrs={'class': 'match__lg_card--scoreboard'}).text
                     placar = placar.split()
                     placar.pop(1)
-                    partidas_resultado.append([campeonato, time_casa, time_fora, placar, data_partida])
+                    provavel_resultado.append([campeonato, time_casa, time_fora, placar, data_partida])
+        partidas_resultado.append(provavel_resultado)
     return partidas_resultado
 
 
@@ -79,14 +91,12 @@ def atualizar_partidas(partidas_atualizar, partidas_resultado, sheet):
     elif not partidas_atualizar:
         return "Nenhum jogo para atualizar"
     else:
-        for chave, resultado in enumerate(partidas_resultado):
-            if resultado[4] == partidas_atualizar[chave][4]:
-                sheet.cell(row=partidas_atualizar[chave][0], column=5).value = float(resultado[3][0])
-                sheet.cell(row=partidas_atualizar[chave][0], column=7).value = float(resultado[3][1])
+        for chave, partida in enumerate(partidas_atualizar):
+            for resultado in partidas_resultado[chave]:
+                if resultado[4] == partida[4]:
+                    sheet.cell(row=partida[0], column=5).value = float(resultado[3][0])
+                    sheet.cell(row=partida[0], column=7).value = float(resultado[3][1])
     return sheet
-
-
-google_colab = False
 
 if google_colab:
     path_planilha = "/content/drive/My Drive/Colab Notebooks/palpitometro.xlsx"
@@ -97,10 +107,12 @@ partidas_atualizar, wb, sheet = verificar_partidas_planilha(path_planilha)
 partidas_resultado = buscar_resultados(partidas_atualizar)
 sheet_atualizada = atualizar_partidas(partidas_atualizar, partidas_resultado, sheet)
 
-print(partidas_atualizar)
-print(partidas_resultado)
+for chave, partida in enumerate(partidas_atualizar):
+    print(partida)
+    print(partidas_resultado[chave])
+
 for partida in partidas_atualizar:
-    linha_valores = [cell.value for cell in sheet[partida[0]]]
+    linha_valores = [cell.value for cell in sheet_atualizada[partida[0]]]
     print(linha_valores)
 
 if google_colab:
