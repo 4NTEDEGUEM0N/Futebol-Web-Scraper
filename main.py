@@ -68,9 +68,14 @@ def buscar_resultados(partidas_atualizar):
             campeonato = partida.find('div', attrs={'class': 'match__lg_card--league'}).text
             if campeonato == "Copa do Brasil" or campeonato == "Copa Libertadores":
                 if partida.find_all('div', attrs={'class': 'match__lg_card--date'}):
-                    data = partida.find('div', attrs={'class': 'match__lg_card--date'}).text.split()
+                    try:
+                        data = partida.find('div', attrs={'class': 'match__lg_card--date'}).text.split()
+                    except AttributeError:
+                        data = ["hoje"]
                     if data[0] == "ontem":
                         data_partida = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+                    elif data[0] == "hoje":
+                        data_partida = datetime.now().strftime("%Y-%m-%d")
                     else:
                         dia_mes = data[1].split("/")
                         data_partida = datetime(2024, int(dia_mes[1]), int(dia_mes[0])).strftime("%Y-%m-%d")
